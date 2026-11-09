@@ -603,6 +603,7 @@ async function* openaiChatStream(
                 delta?: {
                   content?: string;
                   reasoning_content?: string;
+                  reasoning?: string;
                   tool_calls?: {
                     index: number;
                     id?: string;
@@ -633,8 +634,9 @@ async function* openaiChatStream(
             const choice = parsed.choices?.[0];
             const delta = choice?.delta;
 
-            if (delta?.reasoning_content) {
-              chunks.push({ type: "thinking", content: delta.reasoning_content });
+            const reasoning = reasoningDelta(delta);
+            if (reasoning) {
+              chunks.push({ type: "thinking", content: reasoning });
             }
 
             if (delta?.content) {
@@ -809,6 +811,16 @@ function getHttpModule(protocol: string): typeof import("http") {
   }
   const moduleName = protocol === "https:" ? "https" : "http";
   return loader(moduleName) as typeof import("http");
+}
+
+/**
+ * Thinking text from an OpenAI-compatible stream delta.
+ * LM Studio / vLLM use `reasoning_content`; mlx_lm.server uses `reasoning`.
+ */
+export function reasoningDelta(
+  delta: { reasoning_content?: string; reasoning?: string } | undefined,
+): string | undefined {
+  return delta?.reasoning_content || delta?.reasoning || undefined;
 }
 
 /**
